@@ -10,6 +10,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
 SET(particles_SOURCES
 	main.cpp
 	shader.cpp
+	glutil.cpp
 )
 SET(particles_HEADERS
 	shader.hpp

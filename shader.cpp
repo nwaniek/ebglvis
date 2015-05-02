@@ -82,7 +82,7 @@ link(int n, shader *s0, ...) {
 	GL_CHECK_ERROR();
 	if (!link_successful()) {
 		printf("E: Program could not be linked\n");
-		// printlog();
+		printlog();
 	}
 }
 
@@ -101,4 +101,17 @@ use() {
 GLuint program::
 getUniformLocation(std::string name) {
 	return glGetUniformLocation(_program, name.c_str());
+}
+
+void program::
+printlog() {
+	int max_length;
+	glGetProgramiv(_program, GL_INFO_LOG_LENGTH, &max_length);
+	char* const buf = new char[max_length];
+
+	int length;
+	glGetProgramInfoLog(_program, max_length, &length, &buf[0]);
+	printf("E: %s", buf);
+
+	delete[] buf;
 }

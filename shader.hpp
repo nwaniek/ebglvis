@@ -38,6 +38,8 @@ struct program {
 
 private:
 	bool link_successful();
+	void printlog();
+
 	GLuint _program;
 };
 

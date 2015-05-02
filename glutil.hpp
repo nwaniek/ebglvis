@@ -3,11 +3,12 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <cstdio>
 
 
 #define GL_CHECK_ERROR() gl_check_error(__LINE__, __FILE__, __FUNCTION__)
 
-static void
+static inline void
 gl_check_error(int line, const char *file, const char *func) {
 	GLuint error;
 	while ((error = glGetError()))
@@ -15,12 +16,8 @@ gl_check_error(int line, const char *file, const char *func) {
 }
 
 
-static void
-gl_print_info() {
-	const GLubyte* renderer = glGetString(GL_RENDERER);
-	const GLubyte* version = glGetString(GL_VERSION);
-	printf("I: Renderer: %s, Version: %s\n", renderer, version);
-}
+void gl_print_info();
+
 
 
 
