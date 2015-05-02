@@ -1,19 +1,20 @@
 #version 130
 
-in float polarity;
-in vec3 v;
+in uint polarity;
+in vec2 v;
+in uint t;
 
-// out vec3 frag_v;
-out float frag_polarity;
+flat out uint frag_polarity;
 
+uniform uint max_time;
 uniform mat4 mvp;
 
 void main() {
 	// transform vp to homogeneous coordinate
-	vec4 vh = vec4(v, 1.0);
-	gl_Position = mvp * vh; 
-	gl_PointSize = 1.0;
-	frag_polarity = 0.0001 * polarity; // (v[0] + 1.0) / 2.0 * 1.0 * polarity;
-	// frag_v = v;
-}
+	float z = -2.0 * float(t) / float(max_time) + 1.0;
 
+	vec4 vh = vec4(v, z, 1.0);
+	gl_Position = mvp * vh; 
+	gl_PointSize = 1.5;
+	frag_polarity = polarity;
+}

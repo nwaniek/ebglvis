@@ -38,6 +38,7 @@ void shader::compile() {
 	if (!compilation_successful()) {
 		printf("e: shader not compiled properly\n");
 		printlog();
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -83,6 +84,7 @@ link(int n, shader *s0, ...) {
 	if (!link_successful()) {
 		printf("E: Program could not be linked\n");
 		printlog();
+		exit(EXIT_FAILURE);
 	}
 }
 
