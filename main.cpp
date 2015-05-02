@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <chrono>
+#include <memory>
 #include <cmath>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -13,9 +14,11 @@
 #include <glm/gtx/transform.hpp>
 #include "shader.hpp"
 #include "glutil.hpp"
+#include <Edvs/EventStream.hpp>
 
 typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::milliseconds ms;
+typedef std::shared_ptr<Edvs::IEventStream> stream_t;
 
 
 template<typename T>
@@ -164,11 +167,8 @@ rand_range(int min, int max) {
 }
 
 
-/*
- * TODO: receive more data from the DVS
- */
 void
-update_data() {
+update_data(stream_t stream) {
 	static Time::time_point last_call_time = Time::now();
 	Time::time_point now = Time::now();
 
@@ -187,18 +187,36 @@ update_data() {
 				[](Event e){ return e.t > 1000; }),
 			events.end());
 
+	auto dvs_events = stream->read();
+	if (!dvs_events.empty()) {
+		for (const Edvs::Event &dvs_e : dvs_events) {
+			events.push_back({
+					dvs_e.parity ? 1u : 0u,
+					2.0f * (float)dvs_e.x / (float)dvs_size - 1.0f,
+					2.0f * (float)dvs_e.y / (float)dvs_size - 1.0f,
+					0,
+					});
+		}
+	}
+
+	/*
 	// pump data from the DVS to OpenGL
 	for (size_t i = 0; i < N_EVENTS; i++) {
+
+		float x_ = (float)i * ((float)dvs_size / (float)N_EVENTS) * (2.0f / (float)dvs_size) - 1.0f;
+		float y_ = 0.5f * sin(2 * M_PI * x_) + (rand_range(0, 100) / 100.0 - 0.5);
+
 		Event e = {
 			(unsigned)rand_range(0,1),
-			// (float)i * ((float)dvs_size / (float)N_EVENTS) * (2.0f / (float)dvs_size) - 1.0f,
-			2.0f * (float)rand_range(0, dvs_size-1) / (float)dvs_size - 1.0f,
-			// sinf(r),
-			2.0f * (float)rand_range(0, dvs_size-1) / (float)dvs_size - 1.0f,
+			x_,
+			// 2.0f * (float)rand_range(0, dvs_size-1) / (float)dvs_size - 1.0f,
+			y_,
+			//2.0f * (float)rand_range(0, dvs_size-1) / (float)dvs_size - 1.0f,
 			0,
 		};
 		events.push_back(e);
 	}
+	*/
 	last_call_time = now;
 }
 
@@ -259,7 +277,7 @@ gl_destroy(GLFWwindow *window) {
 
 
 void
-render_loop(GLFWwindow *window) {
+render_loop(GLFWwindow *window, stream_t stream) {
 
 	// get IDs to access the data
 	GLuint mvpId = p->getUniformLocation("mvp");
@@ -268,7 +286,7 @@ render_loop(GLFWwindow *window) {
 
 	while (!glfwWindowShouldClose(window)) {
 
-		update_data();
+		update_data(stream);
 		GL_CHECK_ERROR();
 
 		// update the model matrix if we want to have a rotation
@@ -298,18 +316,22 @@ render_loop(GLFWwindow *window) {
 
 int
 main(int, char *[]) {
+	// try to open the DVS
+	stream_t stream = Edvs::OpenEventStream("/dev/ttyUSB0?baudrate=4000000&htsm=0&dtsm=0");
+
 	auto window = gl_setup();
-
-	vs = new shader(GL_VERTEX_SHADER);
-	vs->load_from_file("shaders/vertex.glsl");
-
-	fs = new shader(GL_FRAGMENT_SHADER);
-	fs->load_from_file("shaders/fragment.glsl");
 
 	p = new program();
 
-	fs->compile();
+	vs = new shader(GL_VERTEX_SHADER);
+	vs->load_from_file("shaders/vertex.glsl");
 	vs->compile();
+
+	fs = new shader(GL_FRAGMENT_SHADER);
+	fs->load_from_file("shaders/fragment.glsl");
+	fs->compile();
+
+
 	glBindAttribLocation(p->getId(), polarity_vert, "polarity");
 	glBindAttribLocation(p->getId(), v_vert, "v");
 	glBindAttribLocation(p->getId(), t_vert, "t");
@@ -317,7 +339,7 @@ main(int, char *[]) {
 	p->link(2, vs, fs);
 	generate_buffers();
 
-	render_loop(window);
+	render_loop(window, stream);
 	gl_destroy(window);
 	destroy_data();
 
