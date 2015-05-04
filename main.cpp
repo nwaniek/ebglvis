@@ -20,6 +20,16 @@ typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::milliseconds ms;
 typedef std::shared_ptr<Edvs::IEventStream> stream_t;
 
+int window_size_x = 800;
+int window_size_y = 600;
+
+void
+window_size_callback(GLFWwindow *win, int width, int height)
+{
+	window_size_x = width;
+	window_size_y = height;
+}
+
 
 template<typename T>
 T deg2rad(T d) {
@@ -72,7 +82,7 @@ glm::mat4 view = glm::lookAt(
 		glm::vec3(0.0f, 1.0f, 0.0f));
 glm::mat4 projection = glm::perspective(
 		deg2rad(100.0f),
-		4.0f / 3.0f,
+		(float)window_size_x / (float)window_size_y,
 		0.1f, 100.0f);
 glm::mat4 mvp;
 
@@ -190,6 +200,7 @@ update_data(stream_t stream) {
 	auto dvs_events = stream->read();
 	if (!dvs_events.empty()) {
 		for (const Edvs::Event &dvs_e : dvs_events) {
+
 			events.push_back({
 					dvs_e.parity ? 1u : 0u,
 					2.0f * (float)dvs_e.x / (float)dvs_size - 1.0f,
@@ -236,13 +247,15 @@ gl_setup() {
 	}
 
 	// create a window
-	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
-	GLFWwindow *window = glfwCreateWindow(640, 480, "particles", NULL, NULL);
+	glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
+	GLFWwindow *window = glfwCreateWindow(window_size_x, window_size_y, "particles", NULL, NULL);
 	if (!window) {
 		std::cerr << "E: Could not create window" << std::endl;
 		glfwTerminate();
 		exit(EXIT_FAILURE);
 	}
+	glfwSetWindowSizeCallback(window, window_size_callback);
+
 	// make the window's context current
 	glfwMakeContextCurrent(window);
 
@@ -297,7 +310,7 @@ render_loop(GLFWwindow *window, stream_t stream) {
 
 		mvp = projection * view * model;
 
-		glViewport(0, 0, 640, 480);
+		glViewport(0, 0, window_size_x, window_size_y);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.1f, 0.1f, 0.1f, 0.0f);
 
