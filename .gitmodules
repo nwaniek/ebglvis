@@ -1,0 +1,3 @@
+[submodule "edvstools"]
+	path = edvstools
+	url = ssh://git@github.com/danvil/edvstools.git
