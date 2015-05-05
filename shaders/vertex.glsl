@@ -4,7 +4,7 @@ in uint polarity;
 in vec2 v;
 in uint t;
 
-flat out uint frag_polarity;
+flat out uint color_id;
 out vec3 frag_v;
 
 uniform uint dvs_size;
@@ -17,13 +17,13 @@ void main() {
 
 	// transform the DVS coordinates + time into cube-coordinates
 	vec4 vh = vec4(
-		2.0f * float(v.x) / float(dvs_size) - 1.0f,
 		2.0f * float(v.y) / float(dvs_size) - 1.0f,
+		2.0f * float(v.x) / float(dvs_size) - 1.0f,
 		z, 
 		1.0);
 	frag_v = vec3(vh.x, vh.y, z);
 
 	gl_Position = mvp * vh; 
 	gl_PointSize = 1.5;
-	frag_polarity = polarity;
+	color_id = polarity;
 }
