@@ -6,6 +6,7 @@
 #include <chrono>
 #include <memory>
 #include <cmath>
+#include <cstring>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -22,9 +23,10 @@ typedef std::shared_ptr<Edvs::IEventStream> stream_t;
 
 int window_size_x = 800;
 int window_size_y = 600;
+bool stereo_setup = false;
 
 void
-window_size_callback(GLFWwindow *win, int width, int height)
+window_size_callback(GLFWwindow * /*win*/, int width, int height)
 {
 	window_size_x = width;
 	window_size_y = height;
@@ -44,13 +46,11 @@ struct Event {
 };
 
 // maximal time to display in the cube
-GLuint max_time = 1000;
+GLuint max_time = 1000u;
+GLuint dvs_size = 128u;
 
 // number of events to generate in each 'timeframe'
 #define N_EVENTS  1000
-
-// size of the dvs
-#define dvs_size  128
 
 // vector of events
 std::vector<Event> events;
@@ -177,8 +177,23 @@ rand_range(int min, int max) {
 }
 
 
+void read_data(stream_t *streams, unsigned id) {
+	auto dvs_events = streams[id]->read();
+	if (!dvs_events.empty()) {
+		for (const Edvs::Event &dvs_e : dvs_events) {
+			events.push_back({
+					id, // dvs_e.parity ? 1u : 0u,
+					(float)dvs_e.x,
+					(float)dvs_e.y,
+					0,
+					});
+		}
+	}
+}
+
+
 void
-update_data(stream_t stream) {
+update_data(stream_t *streams) {
 	static Time::time_point last_call_time = Time::now();
 	Time::time_point now = Time::now();
 
@@ -197,37 +212,9 @@ update_data(stream_t stream) {
 				[](Event e){ return e.t > 1000; }),
 			events.end());
 
-	auto dvs_events = stream->read();
-	if (!dvs_events.empty()) {
-		for (const Edvs::Event &dvs_e : dvs_events) {
+	read_data(streams, 0);
+	if (stereo_setup) read_data(streams, 1);
 
-			events.push_back({
-					dvs_e.parity ? 1u : 0u,
-					2.0f * (float)dvs_e.x / (float)dvs_size - 1.0f,
-					2.0f * (float)dvs_e.y / (float)dvs_size - 1.0f,
-					0,
-					});
-		}
-	}
-
-	/*
-	// pump data from the DVS to OpenGL
-	for (size_t i = 0; i < N_EVENTS; i++) {
-
-		float x_ = (float)i * ((float)dvs_size / (float)N_EVENTS) * (2.0f / (float)dvs_size) - 1.0f;
-		float y_ = 0.5f * sin(2 * M_PI * x_) + (rand_range(0, 100) / 100.0 - 0.5);
-
-		Event e = {
-			(unsigned)rand_range(0,1),
-			x_,
-			// 2.0f * (float)rand_range(0, dvs_size-1) / (float)dvs_size - 1.0f,
-			y_,
-			//2.0f * (float)rand_range(0, dvs_size-1) / (float)dvs_size - 1.0f,
-			0,
-		};
-		events.push_back(e);
-	}
-	*/
 	last_call_time = now;
 }
 
@@ -290,16 +277,17 @@ gl_destroy(GLFWwindow *window) {
 
 
 void
-render_loop(GLFWwindow *window, stream_t stream) {
+render_loop(GLFWwindow *window, stream_t *streams) {
 
 	// get IDs to access the data
 	GLuint mvpId = p->getUniformLocation("mvp");
 	GLuint max_time_id = p->getUniformLocation("max_time");
+	GLuint dvs_size_id = p->getUniformLocation("dvs_size");
 	GL_CHECK_ERROR();
 
 	while (!glfwWindowShouldClose(window)) {
 
-		update_data(stream);
+		update_data(streams);
 		GL_CHECK_ERROR();
 
 		// update the model matrix if we want to have a rotation
@@ -319,6 +307,7 @@ render_loop(GLFWwindow *window, stream_t stream) {
 		// set params to shaders
 		glUniformMatrix4fv(mvpId, 1, GL_FALSE, glm::value_ptr(mvp));
 		glUniform1ui(max_time_id, max_time);
+		glUniform1ui(dvs_size_id, dvs_size);
 		render_points();
 
 		glfwPollEvents();
@@ -326,11 +315,36 @@ render_loop(GLFWwindow *window, stream_t stream) {
 	}
 }
 
+void
+print_help() {
+
+}
+
 
 int
-main(int, char *[]) {
+main(int argc, char *argv[]) {
+	// TODO: command line argument parsing
+	std::string dvs_uri1("/dev/ttyUSB0?baudrate=4000000&htsm=0&dtsm=0");
+	std::string dvs_uri2("/dev/ttyUSB1?baudrate=4000000&htsm=0&dtsm=0");
+
+	if (argc > 1) {
+		if (!strcmp("-h", argv[1])) {
+			print_help();
+			exit(EXIT_SUCCESS);
+		}
+		dvs_uri1 = std::string(argv[1]);
+	}
+	if (argc > 2) {
+		dvs_uri2 = std::string(argv[2]);
+		stereo_setup = true;
+	}
+
 	// try to open the DVS
-	stream_t stream = Edvs::OpenEventStream("/dev/ttyUSB0?baudrate=4000000&htsm=0&dtsm=0");
+	stream_t streams[2];
+	streams[0] = Edvs::OpenEventStream(dvs_uri1);
+	if (stereo_setup)
+		streams[1] = Edvs::OpenEventStream(dvs_uri2);
+
 
 	auto window = gl_setup();
 
@@ -352,7 +366,7 @@ main(int, char *[]) {
 	p->link(2, vs, fs);
 	generate_buffers();
 
-	render_loop(window, stream);
+	render_loop(window, streams);
 	gl_destroy(window);
 	destroy_data();
 

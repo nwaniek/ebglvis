@@ -5,16 +5,17 @@ in vec3 frag_v;
 
 out vec4 frag_color;
 
+uniform uint dvs_size;
 uniform uint max_time;
 
-#define USE_COLORS false 
+#define USE_COLORS true
 
 void main() {
 	float z = frag_v.z;
 	z = (z + 1.0) / 2.0;
 	z = z * z * z;
 
-	if (!USE_COLORS || (USE_COLORS && frag_polarity == 1u)) {
+	if (!USE_COLORS || (USE_COLORS && frag_polarity == 0u)) {
 		frag_color = z * 0.8 * vec4(0.1, 0.3, 0.7, 1.0);
 	}
 	else {
