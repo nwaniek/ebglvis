@@ -302,12 +302,15 @@ render_loop(GLFWwindow *window, stream_t *streams) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.1f, 0.1f, 0.1f, 0.0f);
 
+		// want to use the program
 		p->use();
 
 		// set params to shaders
 		glUniformMatrix4fv(mvpId, 1, GL_FALSE, glm::value_ptr(mvp));
 		glUniform1ui(max_time_id, max_time);
 		glUniform1ui(dvs_size_id, dvs_size);
+
+		//
 		render_points();
 
 		glfwPollEvents();

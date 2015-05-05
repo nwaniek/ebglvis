@@ -18,7 +18,7 @@ vec4 colors[2] = vec4[2](
 void main() {
 	float z = frag_v.z;
 	z = (z + 1.0) / 2.0;
-	z = z * z;
+	z = z * z * z;
 	frag_color = z * 0.8 * colors[color_id];
 }
 
