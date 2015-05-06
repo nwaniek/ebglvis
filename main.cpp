@@ -16,6 +16,7 @@
 #include "shader.hpp"
 #include "glutil.hpp"
 #include <Edvs/EventStream.hpp>
+#include <boost/program_options.hpp>
 
 typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::milliseconds ms;
@@ -177,12 +178,12 @@ rand_range(int min, int max) {
 }
 
 
-void read_data(stream_t *streams, unsigned id) {
-	auto dvs_events = streams[id]->read();
+void read_data(std::vector<stream_t> *streams, unsigned id) {
+	auto dvs_events = (*streams)[id]->read();
 	if (!dvs_events.empty()) {
 		for (const Edvs::Event &dvs_e : dvs_events) {
 			events.push_back({
-					id, // dvs_e.parity ? 1u : 0u,
+					(unsigned)id, // dvs_e.parity ? 1u : 0u,
 					(float)dvs_e.x,
 					(float)dvs_e.y,
 					0,
@@ -193,7 +194,7 @@ void read_data(stream_t *streams, unsigned id) {
 
 
 void
-update_data(stream_t *streams) {
+update_data(std::vector<stream_t> *streams) {
 	static Time::time_point last_call_time = Time::now();
 	Time::time_point now = Time::now();
 
@@ -212,8 +213,8 @@ update_data(stream_t *streams) {
 				[](Event e){ return e.t > 1000; }),
 			events.end());
 
-	read_data(streams, 0);
-	if (stereo_setup) read_data(streams, 1);
+	for (size_t i = 0; i < streams->size(); i++)
+		read_data(streams, i);
 
 	last_call_time = now;
 }
@@ -226,7 +227,7 @@ destroy_data() {
 
 
 GLFWwindow*
-gl_setup() {
+create_gl_context() {
 	glfwSetErrorCallback(glfw_error_callback);
 	if (!glfwInit()) {
 		std::cerr << "E: Could not init GLFW" << std::endl;
@@ -274,10 +275,8 @@ gl_destroy(GLFWwindow *window) {
 }
 
 
-
-
 void
-render_loop(GLFWwindow *window, stream_t *streams) {
+render_loop(GLFWwindow *window, std::vector<stream_t> *streams) {
 
 	// get IDs to access the data
 	GLuint mvpId = p->getUniformLocation("mvp");
@@ -318,38 +317,64 @@ render_loop(GLFWwindow *window, stream_t *streams) {
 	}
 }
 
-void
-print_help() {
 
+std::shared_ptr<std::vector<std::string>>
+parse_arguments(int argc, char *argv[]) {
+	typedef std::vector<std::string> vstr;
+
+	std::shared_ptr<vstr> uris;
+	uris = std::make_shared<vstr>();
+
+	namespace po = boost::program_options;
+	po::options_description desc("usage");
+	std::vector<std::string> po_uris;
+	desc.add_options()
+		("help,h", "show the help message")
+		("uris,u", po::value(&po_uris)->multitoken(), "URI(s) to event stream(s)")
+		("one,o", "shortcut option to select device /dev/ttyUSB1")
+		("two,t", "shortcut option to select devices /dev/ttyUSB{1,2}")
+		;
+
+	po::variables_map vm;
+	po::store(po::parse_command_line(argc, argv, desc), vm);
+	po::notify(vm);
+
+	// display some help information
+	if (vm.count("help")) {
+		std::cout << desc << std::endl;
+		exit(EXIT_SUCCESS);
+	}
+
+	// try to guess what the user wants
+	if (vm.count("one")) {
+		uris->push_back("/dev/ttyUSB0?baudrate=4000000&htsm=0&dtsm=0");
+	}
+	else if (vm.count("two")) {
+		uris->push_back("/dev/ttyUSB0?baudrate=4000000&htsm=0&dtsm=0");
+		uris->push_back("/dev/ttyUSB1?baudrate=4000000&htsm=0&dtsm=0");
+	}
+	else {
+		auto it = std::next(po_uris.begin(), 0);
+		std::move(po_uris.begin(), it, std::back_inserter(*uris));
+	}
+
+	if (!uris->size()) {
+		std::cerr << "E: specify at least one device path, or use -o, or -t" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	return uris;
 }
-
 
 int
 main(int argc, char *argv[]) {
-	// TODO: command line argument parsing
-	std::string dvs_uri1("/dev/ttyUSB0?baudrate=4000000&htsm=0&dtsm=0");
-	std::string dvs_uri2("/dev/ttyUSB1?baudrate=4000000&htsm=0&dtsm=0");
 
-	if (argc > 1) {
-		if (!strcmp("-h", argv[1])) {
-			print_help();
-			exit(EXIT_SUCCESS);
-		}
-		dvs_uri1 = std::string(argv[1]);
-	}
-	if (argc > 2) {
-		dvs_uri2 = std::string(argv[2]);
-		stereo_setup = true;
-	}
+	auto uris = parse_arguments(argc, argv);
+	std::vector<stream_t> streams;
+	for (auto it = uris->begin(); it != uris->end(); ++it)
+		streams.push_back(Edvs::OpenEventStream(*it));
 
-	// try to open the DVS
-	stream_t streams[2];
-	streams[0] = Edvs::OpenEventStream(dvs_uri1);
-	if (stereo_setup)
-		streams[1] = Edvs::OpenEventStream(dvs_uri2);
-
-
-	auto window = gl_setup();
+	auto window = create_gl_context();
 
 	p = new program();
 
@@ -369,7 +394,7 @@ main(int argc, char *argv[]) {
 	p->link(2, vs, fs);
 	generate_buffers();
 
-	render_loop(window, streams);
+	render_loop(window, &streams);
 	gl_destroy(window);
 	destroy_data();
 
