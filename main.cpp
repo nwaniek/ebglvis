@@ -202,9 +202,8 @@ update_data(std::vector<stream_t> *streams) {
 	ms dt = std::chrono::duration_cast<ms>(now - last_call_time);
 
 	// increase age -> decrease position
-	for (auto &e: events) {
+	for (auto &e: events)
 		e.t += dt.count();
-	}
 
 	// remove events that are out of reach (t=0 meanse position = -1.0)
 	events.erase(std::remove_if(
@@ -261,8 +260,6 @@ create_gl_context() {
 
 	glEnable(GL_PROGRAM_POINT_SIZE);
 	GL_CHECK_ERROR();
-
-	// tell OpenGL only to draw onto a pixel if the shape is closer to the viewer
 
 	return window;
 }
@@ -346,9 +343,8 @@ parse_arguments(int argc, char *argv[]) {
 	}
 
 	// try to guess what the user wants
-	if (vm.count("one")) {
+	if (vm.count("one"))
 		uris->push_back("/dev/ttyUSB0?baudrate=4000000&htsm=0&dtsm=0");
-	}
 	else if (vm.count("two")) {
 		uris->push_back("/dev/ttyUSB0?baudrate=4000000&htsm=0&dtsm=0");
 		uris->push_back("/dev/ttyUSB1?baudrate=4000000&htsm=0&dtsm=0");
@@ -385,7 +381,6 @@ main(int argc, char *argv[]) {
 	fs = new shader(GL_FRAGMENT_SHADER);
 	fs->load_from_file("shaders/fragment.glsl");
 	fs->compile();
-
 
 	glBindAttribLocation(p->getId(), polarity_vert, "polarity");
 	glBindAttribLocation(p->getId(), v_vert, "v");

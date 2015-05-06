@@ -1,48 +1,48 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8)
 
-PROJECT(ebglvis)
+project(ebglvis)
 
-ADD_DEFINITIONS(-std=c++11)
-SET(CMAKE_BUILD_TYPE DEBUG)
-SET(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
-SET(EDVSTOOLS_PATH  "contrib/edvstools")
+add_definitions(-std=c++11)
+set(CMAKE_BUILD_TYPE RELEASE)
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
+set(EDVSTOOLS_PATH  "contrib/edvstools")
 
-SET(ebglvis_SOURCES
+set(ebglvis_SOURCES
 	main.cpp
 	shader.cpp
 	glutil.cpp
 )
-SET(ebglvis_HEADERS
+set(ebglvis_HEADERS
 	shader.hpp
 	glutil.hpp
 )
 
-FIND_PACKAGE(OpenGL REQUIRED)
-FIND_PACKAGE(GLEW REQUIRED)
-FIND_PACKAGE(PkgConfig REQUIRED)
-FIND_PACKAGE(GLM REQUIRED)
-PKG_SEARCH_MODULE(GLFW REQUIRED glfw3)
-FIND_PACKAGE(
+find_package(OpenGL REQUIRED)
+find_package(GLEW REQUIRED)
+find_package(PkgConfig REQUIRED)
+find_package(GLM REQUIRED)
+pkg_search_module(GLFW REQUIRED glfw3)
+find_package(
 	Boost 1.55.0
 	COMPONENTS
 		program_options
 	REQUIRED)
 
-FIND_LIBRARY(EDVS_LIBRARY Edvs ${EDVSTOOLS_PATH}/build/bin)
+find_library(EDVS_LIBRARY Edvs ${EDVSTOOLS_PATH}/build/bin)
 
-INCLUDE_DIRECTORIES(
+include_directories(
 	${GLFW_INCLUDE_DIRS}
 	${Boost_INCLUDE_DIRS}
 	${EDVSTOOLS_PATH}
 )
 
-ADD_EXECUTABLE(${PROJECT_NAME}
+add_executable(${PROJECT_NAME}
 	${ebglvis_SOURCES}
 	${ebglvis_HEADERS}
 )
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME}
 	m
 	pthread
 	${OPENGL_LIBRARIES}
@@ -53,7 +53,7 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME}
 	${Boost_LIBRARIES}
 )
 
-ADD_CUSTOM_COMMAND(
+add_custom_command(
 	TARGET ${PROJECT_NAME} POST_BUILD
 	COMMAND ln -sf ${CMAKE_SOURCE_DIR}/shaders
 )
