@@ -21,7 +21,7 @@ set(ebglvis_HEADERS
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(PkgConfig REQUIRED)
-find_package(GLM REQUIRED)
+
 pkg_search_module(GLFW REQUIRED glfw3)
 find_package(
 	Boost 1.55.0
@@ -48,7 +48,6 @@ target_link_libraries(${PROJECT_NAME}
 	${OPENGL_LIBRARIES}
 	${GLFW_LIBRARIES}
 	${GLEW_LIBRARIES}
-	${GLM_LIBRARIES}
 	${EDVS_LIBRARY}
 	${Boost_LIBRARIES}
 )
