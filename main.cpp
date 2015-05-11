@@ -19,7 +19,7 @@
 #include <boost/program_options.hpp>
 
 typedef std::chrono::high_resolution_clock Time;
-typedef std::chrono::milliseconds ms;
+typedef std::chrono::microseconds us;
 typedef std::shared_ptr<Edvs::IEventStream> stream_t;
 
 int window_size_x = 800;
@@ -47,7 +47,7 @@ struct Event {
 };
 
 // maximal time to display in the cube
-GLuint max_time = 1000u;
+GLuint max_time = 1000000u;
 GLuint dvs_size = 128u;
 
 // number of events to generate in each 'timeframe'
@@ -146,9 +146,8 @@ glfw_error_callback(int error, const char *description) {
 
 
 static void
-glfw_key_callback(GLFWwindow *win, int key, int /*scancode*/, int action, int /*mode*/) {
-	// if (action != GLFW_PRESS) return;
-
+glfw_key_callback(GLFWwindow *win, int key, int /*scancode*/, int action, int /*mode*/)
+{
 	switch (key) {
 	case GLFW_KEY_ESCAPE:
 	case GLFW_KEY_Q:
@@ -199,7 +198,7 @@ update_data(std::vector<stream_t> *streams) {
 	Time::time_point now = Time::now();
 
 	// compute the time delta
-	ms dt = std::chrono::duration_cast<ms>(now - last_call_time);
+	us dt = std::chrono::duration_cast<us>(now - last_call_time);
 
 	// increase age -> decrease position
 	for (auto &e: events)
@@ -209,7 +208,7 @@ update_data(std::vector<stream_t> *streams) {
 	events.erase(std::remove_if(
 				events.begin(),
 				events.end(),
-				[](Event e){ return e.t > 1000; }),
+				[](Event e){ return e.t > max_time; }),
 			events.end());
 
 	for (size_t i = 0; i < streams->size(); i++)
