@@ -217,6 +217,11 @@ update_data(std::vector<stream_t> *streams) {
 	last_call_time = now;
 }
 
+void
+destroy_buffers() {
+	glDeleteBuffers(1, &vbo);
+	glDeleteVertexArrays(1, &vao);
+}
 
 void
 destroy_data() {
@@ -389,6 +394,8 @@ main(int argc, char *argv[]) {
 	generate_buffers();
 
 	render_loop(window, &streams);
+
+	destroy_buffers();
 	gl_destroy(window);
 	destroy_data();
 
